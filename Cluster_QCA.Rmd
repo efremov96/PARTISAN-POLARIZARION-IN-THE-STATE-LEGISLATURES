@@ -1,12 +1,3 @@
----
-title: "Untitled"
-output: html_document
-date: "2024-12-28"
-editor_options: 
-  chunk_output_type: console
----
-
-
 ```{r}
 library(QCA)
 library(SetMethods)
@@ -161,10 +152,10 @@ CLUSTERPANEL$rrow2 = ifelse(CLUSTERPANEL$rrow %in% labbb, CLUSTERPANEL$rrow, "")
 CLUSTERPANEL$rrow3 = ifelse(CLUSTERPANEL$rrow %in% labb, CLUSTERPANEL$rrow, "")
 
 p1 = xy.plot(x = "UNL_DON.NON_CIT", y = "POLAR" ,
-data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "UNL_DON*MIGR", main = "", labs = CLUSTERPANEL$rrow2)
+data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "UNL_DON*NON_CIT", main = "", labs = CLUSTERPANEL$rrow2)
 
 p2 = xy.plot(x = "SAFE.TERM.NON_CIT", y = "POLAR" ,
-data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "COMPET*TERM*MIGR", main = "", labs = CLUSTERPANEL$rrow3)
+data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "SAFE*TERM*NON_CIT", main = "", labs = CLUSTERPANEL$rrow3)
 
 p1
 
