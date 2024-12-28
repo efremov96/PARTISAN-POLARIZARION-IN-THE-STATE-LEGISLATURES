@@ -1,9 +1,3 @@
----
-title: "General_data_prepare"
-output: html_document
-date: "2024-12-28"
----
-
 ```{r}
 setwd('/Users/daniilefremov/Desktop/dataR/QCA')
 
