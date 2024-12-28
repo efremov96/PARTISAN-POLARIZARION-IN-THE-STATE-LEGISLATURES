@@ -1,0 +1,129 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-12-28"
+---
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(ggpubr)
+
+getwd()
+setwd('/Users/daniilefremov/Desktop/dataR/QCA')
+
+dfSE = data.table(get(load("196slers1967to2016_20180908.RData")))
+```
+
+```{r}
+dfSE = dfSE %>% filter(!(dname == "" & is.na(dno)))
+
+parf = c(unique(dfSE$partyz)[c(2:4,6:7)])
+
+dfSE$dno = paste(as.character(dfSE$dno), dfSE$dname, sep = "_")
+```
+
+```{r}
+dfSES1 = dfSE %>% filter(etype == "g" & sen == 1, dtype == 1) %>% select(year, sab, dno, partyz, vote, cand) %>% group_by(year, sab, dno) %>% filter(!any(partyz %in% parf) & all(c("d", "r") %in% partyz))  %>% ungroup() %>% group_by(year, sab, dno, partyz) %>% filter(n() == 1) %>% select(1:5)
+
+dfSES2 = dfSE %>% filter(etype == "g" & sen == 1, dtype == 1) %>% select(year, sab, dno, partyz, vote, cand) %>% group_by(year, sab, dno) %>% filter(!any(partyz %in% parf) & all(c("d", "r") %in% partyz))  %>% ungroup() %>% group_by(year, sab, dno, partyz) %>% group_by(year, sab, dno, partyz) %>% filter(n() > 1) %>% ungroup() %>% group_by(year, sab, dno, partyz, cand)  %>% reframe(vote = sum(vote)) %>% select(1:4,6)
+
+dfSES3 = rbind.data.frame(dfSES1,dfSES2)
+```
+
+```{r}
+dfSEH1 = dfSE %>% filter(etype == "g" & sen == 0, dtype == 1) %>% select(year, sab, dno, partyz, vote, cand) %>% group_by(year, sab, dno) %>% filter(!any(partyz %in% parf) & all(c("d", "r") %in% partyz))  %>% ungroup() %>% group_by(year, sab, dno, partyz) %>% filter(n() == 1) %>% select(1:5)
+
+dfSEH2 = dfSE %>% filter(etype == "g" & sen == 0, dtype == 1) %>% select(year, sab, dno, partyz, vote, cand) %>% group_by(year, sab, dno) %>% filter(!any(partyz %in% parf) & all(c("d", "r") %in% partyz))  %>% ungroup() %>% group_by(year, sab, dno, partyz) %>% group_by(year, sab, dno, partyz) %>% filter(n() > 1) %>% ungroup() %>% group_by(year, sab, dno, partyz, cand)  %>% reframe(vote = sum(vote)) %>% select(1:4,6)
+
+dfSEH3 = rbind.data.frame(dfSEH1,dfSEH2)
+```
+
+```{r}
+electypeS = dfSES3 %>% pivot_wider(names_from = partyz, values_from = c(vote), values_fn = first) %>% mutate(year = case_when((year %% 2 == 1) ~ year+1,  .default = year))
+
+electypeH = dfSEH3 %>% pivot_wider(names_from = partyz, values_from = c(vote), values_fn = first) %>% mutate(year = case_when((year %% 2 == 1) ~ year+1,  .default = year))
+```
+
+```{r}
+safeSr = electypeS %>% mutate(perc = (r/(r+d)*100)) %>% group_by(year, sab) %>% mutate(avg = mean(perc, na.rm = TRUE)) %>% ungroup() %>% filter(perc - 50 >= 5) %>% group_by(year) %>% reframe(nsafe = n())
+
+safeSd = electypeS %>% mutate(perc = (d/(r+d)*100)) %>% group_by(year, sab) %>% mutate(avg = mean(perc, na.rm = TRUE)) %>% ungroup() %>% filter(perc - 50 >= 5) %>% group_by(year) %>% reframe(nsafe = n())
+
+safeHr = electypeH %>% mutate(perc = (r/(r+d)*100)) %>% group_by(year, sab) %>% mutate(avg = mean(perc, na.rm = TRUE)) %>% ungroup() %>% filter(perc - 50 >= 5) %>% group_by(year) %>% reframe(nsafe = n())
+
+safeHd = electypeH %>% mutate(perc = (d/(r+d)*100)) %>% group_by(year, sab) %>% mutate(avg = mean(perc, na.rm = TRUE)) %>% ungroup() %>% filter(perc - 50 >= 5) %>% group_by(year) %>% reframe(nsafe = n())
+```
+
+```{r}
+p2 = function(x) {ggplot(x, aes(year, y = nsafe)) +
+  geom_line() +
+  theme_bw()}
+
+ggarrange(p2(safeSr) +ggtitle("Upper Chamber (R)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "#FF7F7F"), 
+          p2(safeSd)+ggtitle("Upper Chamber (D)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "skyblue"), 
+          p2(safeHr)+ggtitle("Lower Chamber (R)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "#FF7F7F"),
+          p2(safeHd)+ggtitle("Lower Chamber (D)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "skyblue"),
+          vjust=3, hjust = -0.5, ncol = 2, nrow = 2)
+
+```{r}
+p2 = function(x) {ggplot(x, aes(year, y = nsafe)) +
+  geom_line() +
+  theme_bw()}
+
+all_plots = ggarrange(p2(safeSr) +ggtitle("Upper Chamber (R)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "#FF7F7F"), 
+          p2(safeSd)+ggtitle("Upper Chamber (D)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "skyblue"), 
+          p2(safeHr)+ggtitle("Lower Chamber (R)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "#FF7F7F"),
+          p2(safeHd)+ggtitle("Lower Chamber (D)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "skyblue"),
+          vjust=3, hjust = -0.5, ncol = 2, nrow = 2)
+
+repub_plots = ggarrange(p2(safeSr) +ggtitle("Верхняя палата (R)") + labs(x = "", y = "Количество округов") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "#FF7F7F"), 
+          p2(safeHr)+ggtitle("Нижняя палата (R)") + labs(x = "", y = "Количество округов") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = T, fill = "#FF7F7F"),
+          vjust=3, hjust = -0.5, ncol = 2)
+
+repub_plots
+```
+
+```{r}
+parfd = c(unique(dfSE$partyz)[c(2:7)])
+parfr = c(unique(dfSE$partyz)[c(1:4,6:7)])
+
+ff = function(x, y){dfSE %>% filter(etype == "g" & sen == x, dtype == 1) %>% select(year, sab, dno, partyz, vote, cand) %>% group_by(year, sab, dno) %>% filter(!any(partyz %in% y))  %>% ungroup() %>% group_by(year, sab, dno) %>% filter(n() == 1) %>% select(1:5) %>% ungroup()}
+
+dfunSR = ff(1, parfr) %>% mutate(year = if_else(year %% 2 == 1, year+1, year)) %>% distinct() %>%  group_by(year) %>% mutate(N = n()) 
+
+dfunSD = ff(1, parfd) %>% mutate(year = if_else(year %% 2 == 1, year+1, year)) %>%  group_by(year) %>% mutate(N = n())
+
+dfunHR = ff(0, parfr) %>% mutate(year = if_else(year %% 2 == 1, year+1, year)) %>%  group_by(year) %>% mutate(N = n())
+
+dfunHD = ff(0, parfd) %>% mutate(year = if_else(year %% 2 == 1, year+1, year)) %>%  group_by(year) %>% mutate(N = n())
+```
+
+```{r}
+p3 = function(x) {ggplot(x, aes(year, y = N)) +
+  geom_line(alpha = 0.7) +
+  theme_bw()}
+
+all_p = ggarrange(p3(dfunSR) +ggtitle("Upper Chamber (R)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = TRUE, fill = "#FF7F7F"), 
+          p3(dfunSD)+ggtitle("Upper Chamber (D)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = TRUE, fill = "skyblue"), 
+          p3(dfunHR)+ggtitle("Lower Chamber (R)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = TRUE, fill = "#FF7F7F"),
+          p3(dfunHD)+ggtitle("Lower Chamber (D)") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = TRUE, fill = "skyblue"),
+          vjust=3, hjust = -0.5, ncol = 2, nrow = 2)
+
+repub_p = ggarrange(p3(dfunSR) +ggtitle("Верхняя палата (R)") + labs(x = "", y = "Количество округов") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = TRUE, fill = "#FF7F7F"), 
+          p3(dfunHR)+ggtitle("Нижняя палата (R)") + labs(x = "", y = "Количество округов") + geom_smooth(method = "lm", linetype = "dashed", color = "black", linewidth = 0.5, se = TRUE, fill = "#FF7F7F"),
+          vjust=3, hjust = -0.5, ncol = 2)
+```
+
+
+
+
+
+
+
+
+
+
