@@ -1,0 +1,182 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-12-28"
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r}
+library(QCA)
+library(SetMethods)
+library(readxl)
+library(openxlsx)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(venn)
+
+House = read.xlsx("panel_state_dataH.xlsx")
+```
+
+```{r}
+House = House %>% mutate(rrow = paste0(st, "_", as.character(year)))
+House = House %>% column_to_rownames(var = "rrow")
+
+colnames(House) = c("YEAR", "STATE", "SAFE", "TERM", "UNL_DON", "NON_CIT", "POLAR")
+```
+
+```{r}
+Xplot(House$POLAR, jitter=TRUE, at=pretty(House$POLAR))
+sort(House$POLAR)
+quantfown <- quantile(House$POLAR,c(0.2,0.4,0.5,0.6,0.8))
+quantfown
+House$POLARB<-NA
+House$POLARB[House$POLAR<= quantfown [1]]<-0
+House$POLARB[House$POLAR > quantfown [1] & House$POLAR <= quantfown [2]]<-0.2
+House$POLARB[House$POLAR > quantfown [2] & House$POLAR <= quantfown [3]]<-0.4
+House$POLARB[House$POLAR > quantfown [3] & House$POLAR <= quantfown [4]]<-0.6
+House$POLARB[House$POLAR > quantfown [4] & House$POLAR <= quantfown [5]]<-0.8
+House$POLARB[House$POLAR > quantfown [5]]<-1
+House$POLARbinom <- indirectCalibration(House$POLAR, House$POLARB, binom=TRUE)
+House$POLARbeta <- indirectCalibration(House$POLAR, House$POLARB, binom=FALSE)
+
+quantfown <- quantile(House$SAFE,c(0.2,0.4,0.5,0.6,0.8))
+House$SAFEB<-NA
+House$SAFEB[House$SAFE<= quantfown [1]]<-0
+House$SAFEB[House$SAFE > quantfown [1] & House$SAFE <= quantfown [2]]<-0.2
+House$SAFEB[House$SAFE > quantfown [2] & House$SAFE <= quantfown [3]]<-0.4
+House$SAFEB[House$SAFE > quantfown [3] & House$SAFE <= quantfown [4]]<-0.6
+House$SAFEB[House$SAFE > quantfown [4] & House$SAFE <= quantfown [5]]<-0.8
+House$SAFEB[House$SAFE > quantfown [5]]<-1
+House$SAFEbinom <- indirectCalibration(House$SAFE, House$SAFEB, binom=TRUE)
+House$SAFEbeta <- indirectCalibration(House$SAFE, House$SAFEB, binom=FALSE)
+
+quantfown <- quantile(House$NON_CIT,c(0.2,0.4,0.5,0.6,0.8))
+House$NON_CITB<-NA
+House$NON_CITB[House$NON_CIT<= quantfown [1]]<-0
+House$NON_CITB[House$NON_CIT > quantfown [1] & House$NON_CIT <= quantfown [2]]<-0.2
+House$NON_CITB[House$NON_CIT > quantfown [2] & House$NON_CIT <= quantfown [3]]<-0.4
+House$NON_CITB[House$NON_CIT > quantfown [3] & House$NON_CIT <= quantfown [4]]<-0.6
+House$NON_CITB[House$NON_CIT > quantfown [4] & House$NON_CIT <= quantfown [5]]<-0.8
+House$NON_CITB[House$NON_CIT > quantfown [5]]<-1
+House$NON_CITbinom <- indirectCalibration(House$NON_CIT, House$NON_CITB, binom=TRUE)
+House$NON_CITbeta <- indirectCalibration(House$NON_CIT, House$NON_CITB, binom=FALSE)
+
+cor(House$SAFEbinom,House$SAFEbeta)
+plot(House$SAFE,House$SAFEbinom)
+plot(House$SAFE,House$SAFEbeta)
+skew.check(House$SAFEbinom)
+skew.check(House$SAFEbeta)
+
+House$POLAR = House$POLARbeta
+House$NON_CIT = House$NON_CITbinom
+House$SAFE = House$SAFEbinom
+```
+
+```{r}
+QCAfit(House[,3:6], House$POLAR, necessity = TRUE, consH = TRUE)
+```
+
+```{r}
+ttEMP<-truthTable(data=House, outcome="POLAR",
+conditions= c("SAFE", "TERM", "UNL_DON", "NON_CIT"), incl.cut
+= 0.85, pri.cut=0.51, dcc= TRUE,
+decreasing=FALSE,complete=TRUE, show.cases = TRUE)
+
+ttemp<-truthTable(data=House, outcome="~POLAR",
+conditions= c("SAFE", "TERM", "UNL_DON", "NON_CIT"), incl.cut
+= 0.85, sort.by = "incl,n", pri.cut=0.51, dcc= TRUE,
+decreasing=FALSE,complete=TRUE, show.cases = TRUE)
+```
+
+```{r}
+sol_EMPB<-minimize(input=ttEMP, details=TRUE, row.dom=TRUE)
+sol_EMPB
+sol_empb<-minimize(input=ttemp, details=TRUE, row.dom=TRUE)
+sol_empb
+
+LR.intersect(sol_EMPB, sol_empb)
+```
+
+```{r}
+sol_CEMP <- minimize(ttEMP, details=TRUE, row.dom=TRUE)
+sol_CEMP
+sol_PEMP <-minimize(ttEMP, include="?", details=TRUE,
+row.dom=TRUE)
+sol_PEMP
+sol_IEMP <- minimize(ttEMP, include = "?", dir.exp = "1,
+1, 1, 1",details=TRUE, row.dom=TRUE)
+sol_IEMP
+```
+
+```{r}
+TYPETWO<-findRows(obj=ttEMP, type=2)
+TYPETWO
+```
+
+```{r}
+sola<-sol_IEMP$i.sol$C1P1$pims
+sola
+solb<-sol_IEMP$i.sol$C1P2$pims
+solb
+```
+
+```{r}
+CLUSTERPANEL<-c(House,sola)
+CLUSTERPANEL<-as.data.frame(CLUSTERPANEL)
+CLUSTERPANELB<-c(House, solb)
+CLUSTERPANELB<-as.data.frame(CLUSTERPANELB)
+```
+
+```{r}
+PANELA <-cluster(data = CLUSTERPANEL, results="UNL_DON*NON_CIT", outcome = "POLAR",unit_id =
+"STATE", cluster_id = "YEAR", necessity=FALSE,
+wicons=TRUE)
+PANELA
+PANELB <-cluster(data = CLUSTERPANEL, results= "SAFE*TERM*NON_CIT", outcome = "POLAR",unit_id =
+"STATE", cluster_id = "YEAR", necessity=FALSE,
+wicons=TRUE)
+PANELB
+```
+
+```{r}
+CD <-cluster(data=House, results=sol_IEMP, outcome=
+"POLAR", unit_id="STATE", cluster_id="YEAR", necessity
+= FALSE, wicons=TRUE)
+cluster.plot(cluster.res= CD, labs=TRUE, size=7, angle=15,
+wicons=TRUE, wiconslabs = TRUE)
+```
+
+```{r}
+CLUSTERPANEL = CLUSTERPANEL %>% mutate(rrow = paste0(STATE, "_", as.character(YEAR)))
+
+labbb = c("VA_2010","OR_2010","TX_2010","UT_2010","VA_2014","OR_2014","TX_2014","VA_2016","OR_2016","VA_2012","OR_2012","TX_2012","UT_2012","UT_2014","TX_2016","UT_2016")
+
+labb = c("CA_2010","CO_2010","FL_2010","CA_2012","NV_2012","CA_2014","CA_2016","FL_2016","NV_2016")
+
+CLUSTERPANEL$rrow2 = ifelse(CLUSTERPANEL$rrow %in% labbb, CLUSTERPANEL$rrow, "")
+CLUSTERPANEL$rrow3 = ifelse(CLUSTERPANEL$rrow %in% labb, CLUSTERPANEL$rrow, "")
+
+p1 = xy.plot(x = "UNL_DON.NON_CIT", y = "POLAR" ,
+data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "UNL_DON*MIGR", main = "", labs = CLUSTERPANEL$rrow2)
+
+p2 = xy.plot(x = "SAFE.TERM.NON_CIT", y = "POLAR" ,
+data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "COMPET*TERM*MIGR", main = "", labs = CLUSTERPANEL$rrow3)
+
+p1
+
+p2
+```
+
+
+```{r}
+venn(sol_IEMP$solution, counts = TRUE,  size = 0.8, box = TRUE, ggplot = TRUE, zcol = "blue, red")
+```
+
+
+
+
+
