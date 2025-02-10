@@ -1,12 +1,4 @@
----
-title: "Untitled"
-output: html_document
-date: "2025-02-10"
----
-
 ```{r}
-setwd("/Users/daniilefremov/Desktop/dataR/Panel_QCA/States_elections/States_elections_QCA")
-
 He = read_xlsx("state_house_elections.xlsx")
 
 HE = He %>% select(-id) %>%  pivot_wider(id_cols = c(District, st, year), names_from = Party, values_from = Votes, values_fn = sum) 
@@ -21,7 +13,6 @@ safeH = HE %>% mutate(safer = (`Republican Party`/(`Republican Party` + `Democra
 
 ```
 
-
 ```{r}
 dfHD = HE %>% group_by(year, st) %>% reframe(ND = n())
 
@@ -29,7 +20,6 @@ dfHD = left_join(dfHD, safeH, by = c("year","st"))
 
 HS = dfHD %>% mutate(Safe = (nsafeH/ND)*100) %>% select(1:2, 5)
 ```
-
 
 ```{r}
 HS$year = as.factor(HS$year)
@@ -63,4 +53,3 @@ ggplot(HUn, aes(x=year, y=UN, fill = year)) +
   ggtitle("") + labs(x = "", y = "Процент бесконкурентных округов") +
   theme_bw()
 ```
-
