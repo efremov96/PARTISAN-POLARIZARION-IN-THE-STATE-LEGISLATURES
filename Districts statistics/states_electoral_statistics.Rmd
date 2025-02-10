@@ -1,0 +1,66 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-02-10"
+---
+
+```{r}
+setwd("/Users/daniilefremov/Desktop/dataR/Panel_QCA/States_elections/States_elections_QCA")
+
+He = read_xlsx("state_house_elections.xlsx")
+
+HE = He %>% select(-id) %>%  pivot_wider(id_cols = c(District, st, year), names_from = Party, values_from = Votes, values_fn = sum) 
+
+HE = HE %>% mutate(`Democratic Party` = ifelse(is.na(`Democratic Party`), 0, `Democratic Party`), `Republican Party` = ifelse(is.na(`Republican Party`), 0, `Republican Party`), Other = ifelse(is.na(Other), 0, Other))
+```
+
+```{r}
+HE = HE %>% mutate(year = case_when((year %% 2 == 1) ~ year-1,  .default = year))
+
+safeH = HE %>% mutate(safer = (`Republican Party`/(`Republican Party` + `Democratic Party` + Other))*100, safed = (`Democratic Party`/(`Republican Party` + `Democratic Party` + Other))*100) %>% group_by(year, st) %>% filter(safer >= 55 | safed >= 55) %>% reframe(nsafeH = n()) %>% ungroup()
+
+```
+
+
+```{r}
+dfHD = HE %>% group_by(year, st) %>% reframe(ND = n())
+
+dfHD = left_join(dfHD, safeH, by = c("year","st"))
+
+HS = dfHD %>% mutate(Safe = (nsafeH/ND)*100) %>% select(1:2, 5)
+```
+
+
+```{r}
+HS$year = as.factor(HS$year)
+
+ggplot(HS, aes(x=year, y=Safe, fill = year)) + 
+  geom_boxplot() +
+  stat_summary(fun = "mean", geom = "point", shape = 8,
+               size = 2, color = "white") +
+  ggtitle("") + labs(x = "", y = "Процент безопасных округов") +
+  theme_bw()
+
+```
+
+```{r}
+HE2 = He %>% group_by(st, year, District) %>% reframe(N = n()) %>% filter(N == 1) %>% ungroup() %>% group_by(year, st) %>% reframe(Un = n()) %>% ungroup()
+
+unHD = HE %>% group_by(year, st) %>% reframe(ND = n())
+
+unHD = left_join(unHD, HE2, by = c("year","st")) %>% mutate(Un = ifelse(is.na(Un), 0, Un))
+
+HUn = unHD %>% mutate(UN = (Un/ND)*100) %>% select(1:2, 5)
+```
+
+```{r}
+HUn$year = as.factor(HUn$year)
+
+ggplot(HUn, aes(x=year, y=UN, fill = year)) + 
+  geom_boxplot() +
+  stat_summary(fun = "mean", geom = "point", shape = 8,
+               size = 2, color = "white") +
+  ggtitle("") + labs(x = "", y = "Процент бесконкурентных округов") +
+  theme_bw()
+```
+
