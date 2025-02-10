@@ -111,15 +111,11 @@ TYPETWO
 ```{r}
 sola<-sol_IEMP$i.sol$C1P1$pims
 sola
-solb<-sol_IEMP$i.sol$C1P2$pims
-solb
 ```
 
 ```{r}
 CLUSTERPANEL<-c(House,sola)
 CLUSTERPANEL<-as.data.frame(CLUSTERPANEL)
-CLUSTERPANELB<-c(House, solb)
-CLUSTERPANELB<-as.data.frame(CLUSTERPANELB)
 ```
 
 ```{r}
@@ -127,10 +123,14 @@ PANELA <-cluster(data = CLUSTERPANEL, results="UNL_DON*NON_CIT", outcome = "POLA
 "STATE", cluster_id = "YEAR", necessity=FALSE,
 wicons=TRUE)
 PANELA
-PANELB <-cluster(data = CLUSTERPANEL, results= "SAFE*TERM*NON_CIT", outcome = "POLAR",unit_id =
+PANELB <-cluster(data = CLUSTERPANEL, results= "SAFE*TERM*UNL_DON", outcome = "POLAR",unit_id =
 "STATE", cluster_id = "YEAR", necessity=FALSE,
 wicons=TRUE)
 PANELB
+PANELC <-cluster(data = CLUSTERPANEL, results= "SAFE*TERM*NON_CIT", outcome = "POLAR",unit_id =
+"STATE", cluster_id = "YEAR", necessity=FALSE,
+wicons=TRUE)
+PANELC
 ```
 
 ```{r}
@@ -144,22 +144,30 @@ wicons=TRUE, wiconslabs = TRUE)
 ```{r}
 CLUSTERPANEL = CLUSTERPANEL %>% mutate(rrow = paste0(STATE, "_", as.character(YEAR)))
 
-labbb = c("VA_2010","OR_2010","TX_2010","UT_2010","VA_2014","OR_2014","TX_2014","VA_2016","OR_2016","VA_2012","OR_2012","TX_2012","UT_2012","UT_2014","TX_2016","UT_2016")
+labbb = c("NM_2010","OR_2010","TX_2010","UT_2010","OR_2012","VA_2012","OR_2014","OR_2016","VA_2016","IL_2010","VA_2010","TX_2012","UT_2012","TX_2014","UT_2014","VA_2014","TX_2016","UT_2016")
 
-labb = c("CA_2010","CO_2010","FL_2010","CA_2012","NV_2012","CA_2014","CA_2016","FL_2016","NV_2016")
+labb = c("MO_2010","MO_2012","MO_2014","MO_2016")
+
+lab = c("CA_2010","FL_2010","CA_2012","CA_2014","FL_2014","CA_2016")
 
 CLUSTERPANEL$rrow2 = ifelse(CLUSTERPANEL$rrow %in% labbb, CLUSTERPANEL$rrow, "")
 CLUSTERPANEL$rrow3 = ifelse(CLUSTERPANEL$rrow %in% labb, CLUSTERPANEL$rrow, "")
+CLUSTERPANEL$rrow4 = ifelse(CLUSTERPANEL$rrow %in% lab, CLUSTERPANEL$rrow, "")
 
 p1 = xy.plot(x = "UNL_DON.NON_CIT", y = "POLAR" ,
 data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "UNL_DON*NON_CIT", main = "", labs = CLUSTERPANEL$rrow2)
 
-p2 = xy.plot(x = "SAFE.TERM.NON_CIT", y = "POLAR" ,
-data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "SAFE*TERM*NON_CIT", main = "", labs = CLUSTERPANEL$rrow3)
+p2 = xy.plot(x = "SAFE.TERM.UNL_DON", y = "POLAR" ,
+data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "SAFE*TERM*UNL_DON", main = "", labs = CLUSTERPANEL$rrow3)
+
+p3 = xy.plot(x = "SAFE.TERM.NON_CIT", y = "POLAR" ,
+data = CLUSTERPANEL, necessity = FALSE, jitter = TRUE, fontsize = 3,  ylab = "POLAR", xlab = "SAFE*TERM*NON_CIT", main = "", labs = CLUSTERPANEL$rrow4)
 
 p1
 
 p2
+
+p3
 ```
 
 
